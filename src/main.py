@@ -1,13 +1,24 @@
 from GetData import GetData
 from Chromosome import Chromosome
+from Population import Population
+from Genetic import Genetic
 import os
 import folium
 import random
+import matplotlib.pyplot as plt
 
-DEPOT = "Hanoi University of Science, Vietnam"
-NUM_POINTS = 10
-MAX_DISTANCE = 12
-NUM_VEHICLES = 3  # Define number of vehicles
+# Location parameters
+DEPOT = "Hanoi University of Science and Technology, Vietnam"
+NUM_POINTS = 40
+MAX_DISTANCE = 10
+NUM_VEHICLES = 8  # Reduced to 3 for clearer visualization
+
+# GA parameters
+POPULATION_SIZE = 500
+MAX_GENERATIONS = 500
+SELECTION_RATE = 0.9
+MUTATION_RATE = 0.1
+ELITISM_SIZE = 2
 
 def draw_routes(map_obj, locations, routes):
     """
@@ -18,7 +29,7 @@ def draw_routes(map_obj, locations, routes):
         locations: List of (lat, lon) tuples including depot at index 0
         routes: List of routes, each containing location indices
     """
-    # List of distinct colors for routes
+    
     colors = ['red', 'blue', 'green', 'purple', 'orange', 'darkred', 
               'darkblue', 'darkgreen', 'cadetblue', 'darkpurple',
               'pink', 'lightblue', 'lightgreen', 'gray', 'black']
@@ -60,12 +71,29 @@ def draw_routes(map_obj, locations, routes):
                 tooltip=f'Route {i+1}: {" → ".join(route_debug)}'
             ).add_to(map_obj)
 
+def plot_evolution_progress(best_history, avg_history):
+    """Plot the evolution of fitness over generations"""
+    plt.figure(figsize=(10, 6))
+    generations = range(len(best_history))
+    
+    plt.plot(generations, best_history, 'b-', label='Best Fitness')
+    plt.plot(generations, avg_history, 'r-', label='Average Fitness')
+    
+    plt.title('Fitness Evolution Over Generations')
+    plt.xlabel('Generation')
+    plt.ylabel('Fitness (Total Distance)')
+    plt.legend()
+    plt.grid(True)
+    
+    return plt
+
 def main():
-    print("Starting data generation process...")
+    print("Starting VRP solution with Genetic Algorithm...")
     script_dir = os.path.dirname(os.path.abspath(__file__))
     static_dir = os.path.join(script_dir, "static")
     os.makedirs(static_dir, exist_ok=True)
     
+    # Step 1: Generate location data
     data_generator = GetData(
         location_name=DEPOT, 
         num_random_points=NUM_POINTS,  
@@ -75,33 +103,71 @@ def main():
     
     locations, distance_matrix = data_generator.run()
     
-    # print(f"\nTesting Chromosome class with {NUM_POINTS} locations and {NUM_VEHICLES} vehicles")
+    # Step 2: Initialize population
+    print("\n---------------------------------------")
+    print(f"Initializing population of {POPULATION_SIZE} chromosomes")
+    population = Population(
+        pop_size=POPULATION_SIZE,
+        num_locations=NUM_POINTS,
+        num_vehicles=NUM_VEHICLES,
+        distance_matrix=distance_matrix
+    )
     
-    # # Create 3 random chromosomes for testing
-    # chromosomes = []
-    # for i in range(3):
-    #     chrom = Chromosome(NUM_POINTS, NUM_VEHICLES)
-    #     fitness = chrom.calculate_fitness(distance_matrix)
-    #     chromosomes.append(chrom)
-    #     print(f"\nChromosome {i+1} - Fitness: {fitness:.2f} km")
-    #     print(f"Genes: {chrom.genes}")
-    #     print(chrom)
+    # Draw initial best solution
+    initial_best = population.find_best_chromosome()
+    print("\nInitial Best Solution:")
+    print(f"Fitness (Total Distance): {initial_best.fitness:.2f} km")
+    print(initial_best)
     
-    # # Select the best chromosome to visualize
-    # best_chrom = min(chromosomes, key=lambda x: x.fitness)
-    # print(f"\nVisualizing best chromosome (Fitness: {best_chrom.fitness:.2f} km)")
+    initial_map = data_generator.create_map()
+    data_generator.add_markers()
+    draw_routes(initial_map, locations, initial_best.get_routes())
+    initial_map_path = os.path.join(static_dir, "initial_solution.html")
+    initial_map.save(initial_map_path)
+    print(f"Initial solution map saved to {initial_map_path}")
     
-    # # Create a new map for route visualization
-    # route_map = data_generator.create_map()
-    # data_generator.add_markers()
+    # Step 3: Run genetic algorithm
+    print("\n---------------------------------------")
+    print("Starting genetic algorithm evolution...")
+    ga = Genetic(
+        population=population,
+        max_generations=MAX_GENERATIONS,
+        selection_rate=SELECTION_RATE,
+        mutation_rate=MUTATION_RATE,
+        elitism_size=ELITISM_SIZE
+    )
     
-    # # Draw routes on map
-    # draw_routes(route_map, locations, best_chrom.get_routes())
+    final_solution = ga.run(verbose=True)
     
-    # # Save the route map
-    # route_map_path = os.path.join(static_dir, "route_map.html")
-    # route_map.save(route_map_path)
-    # print(f"Route map saved to {route_map_path}")
+    # Step 4: Visualize final solution
+    print("\n---------------------------------------")
+    print("Final Solution:")
+    print(f"Fitness (Total Distance): {final_solution.fitness:.2f} km")
+    print(final_solution)
+    
+    final_map = data_generator.create_map()
+    data_generator.add_markers()
+    draw_routes(final_map, locations, final_solution.get_routes())
+    final_map_path = os.path.join(static_dir, "final_solution.html")
+    final_map.save(final_map_path)
+    print(f"Final solution map saved to {final_map_path}")
+    
+    # Step 5: Plot fitness evolution
+    print("\n---------------------------------------")
+    print("Plotting fitness evolution...")
+    progress = ga.get_progress()
+    plt = plot_evolution_progress(
+        progress["best_fitness_history"], 
+        progress["avg_fitness_history"]
+    )
+    plot_path = os.path.join(static_dir, "fitness_evolution.png")
+    plt.savefig(plot_path)
+    print(f"Fitness evolution plot saved to {plot_path}")
+    
+    # Calculate improvement
+    improvement = 1 - (final_solution.fitness / initial_best.fitness)
+    print(f"\nImprovement: {improvement:.2%}")
+    print("VRP solution completed successfully!")
 
 if __name__ == "__main__":
     main()
