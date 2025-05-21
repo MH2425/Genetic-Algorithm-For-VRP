@@ -10,7 +10,7 @@ class Genetic:
     Genetic Algorithm class for Vehicle Routing Problem.
     Manages the evolution of a population of chromosomes to find optimal routes.
     """
-    def __init__(self, population, max_generations=100, selection_rate=0.5, 
+    def __init__(self, population, max_generations=100, 
                  mutation_rate=0.1, elitism_size=2):
         """
         Initialize the Genetic Algorithm.
@@ -24,17 +24,15 @@ class Genetic:
         """
         self.population = population
         self.max_generations = max_generations
-        self.selection_rate = selection_rate
         self.mutation_rate = mutation_rate
         self.elitism_size = elitism_size
         
-        # Track evolution progress
+        # Track progress
         self.current_generation = 0
         self.best_solution = None
         self.best_fitness_history = []
         self.avg_fitness_history = []
         
-        # Record initial state
         best_chrom = self.population.find_best_chromosome()
         self.best_solution = copy.deepcopy(best_chrom)
         self.best_fitness_history.append(best_chrom.fitness)
@@ -53,8 +51,7 @@ class Genetic:
       Returns:
           list: Selected chromosomes for reproduction
       """
-      # Calculate how many chromosomes to select
-      select_count = max(2, int(len(self.population.chromosomes) * self.selection_rate))
+      select_count = 2
       selected = []
       
       # Perform binary tournaments until we have enough selected chromosomes
@@ -201,27 +198,19 @@ class Genetic:
       """
       Create the next generation of chromosomes through selection, crossover, and mutation.
       """
-      # Sort current population by fitness
       sorted_chromosomes = sorted(self.population.chromosomes, key=lambda x: x.fitness)
-      
-      # Keep elites (best chromosomes) unchanged
       new_population = copy.deepcopy(sorted_chromosomes[:self.elitism_size])
-      
-      # Select parents and create offspring for the rest
+
       while len(new_population) < self.population.pop_size:
-          # Select parents
           selected = self.selection()
           if len(selected) < 2:
               break
-              
-          # Random selection of parents from the selected group
           parent1 = random.choice(selected)
           parent2 = random.choice(selected)
           
-          # Crossover - now returns two offspring
+          # Crossover
           offspring1, offspring2 = self.crossover(parent1, parent2)
           
-          # Add first offspring to new population
           if random.random() < self.mutation_rate:
               offspring1 = self.mutate(offspring1)
               
@@ -236,11 +225,10 @@ class Genetic:
               offspring2.calculate_fitness(self.population.distance_matrix)
               new_population.append(offspring2)
       
-      # Replace old population with new one
       self.population.chromosomes = new_population
       self.current_generation += 1
       
-      # Update best solution and history
+      # Update 
       current_best = self.population.find_best_chromosome()
       if current_best.fitness < self.best_solution.fitness:
           self.best_solution = copy.deepcopy(current_best)

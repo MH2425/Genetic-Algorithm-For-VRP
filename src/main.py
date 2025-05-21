@@ -8,16 +8,15 @@ import random
 import matplotlib.pyplot as plt
 
 # Location parameters
-DEPOT = "Hanoi University of Science and Technology, Vietnam"
+DEPOT = "Hanoi University of Science, Vietnam"
 NUM_POINTS = 40
-MAX_DISTANCE = 10
-NUM_VEHICLES = 8  # Reduced to 3 for clearer visualization
+MAX_DISTANCE = 15
+NUM_VEHICLES = 5
 
 # GA parameters
 POPULATION_SIZE = 500
-MAX_GENERATIONS = 500
-SELECTION_RATE = 0.9
-MUTATION_RATE = 0.1
+MAX_GENERATIONS = 1000
+MUTATION_RATE = 0.01
 ELITISM_SIZE = 2
 
 def draw_routes(map_obj, locations, routes):
@@ -33,20 +32,15 @@ def draw_routes(map_obj, locations, routes):
     colors = ['red', 'blue', 'green', 'purple', 'orange', 'darkred', 
               'darkblue', 'darkgreen', 'cadetblue', 'darkpurple',
               'pink', 'lightblue', 'lightgreen', 'gray', 'black']
+
     
-    # Debug information
-    print("\nDebug - Drawing routes:")
-    
-    # Draw each route with a unique color
     for i, route in enumerate(routes):
         route_color = colors[i % len(colors)]
         route_points = []
         route_debug = []
-        
-        # Convert route indices to coordinates
+      
         for loc_idx in route:
             if loc_idx == -1:
-                # Depot is at index 0 in locations list
                 actual_loc = locations[0]
                 label = "D"
             else:
@@ -58,10 +52,7 @@ def draw_routes(map_obj, locations, routes):
             route_points.append(actual_loc)
             route_debug.append(label)
         
-        # Print debug info for this route
-        print(f"Route {i+1}: {' → '.join(route_debug)}")
         
-        # Only draw routes with at least 2 points
         if len(route_points) >= 2:
             folium.PolyLine(
                 route_points,
@@ -92,8 +83,7 @@ def main():
     script_dir = os.path.dirname(os.path.abspath(__file__))
     static_dir = os.path.join(script_dir, "static")
     os.makedirs(static_dir, exist_ok=True)
-    
-    # Step 1: Generate location data
+
     data_generator = GetData(
         location_name=DEPOT, 
         num_random_points=NUM_POINTS,  
@@ -103,7 +93,6 @@ def main():
     
     locations, distance_matrix = data_generator.run()
     
-    # Step 2: Initialize population
     print("\n---------------------------------------")
     print(f"Initializing population of {POPULATION_SIZE} chromosomes")
     population = Population(
@@ -113,7 +102,6 @@ def main():
         distance_matrix=distance_matrix
     )
     
-    # Draw initial best solution
     initial_best = population.find_best_chromosome()
     print("\nInitial Best Solution:")
     print(f"Fitness (Total Distance): {initial_best.fitness:.2f} km")
@@ -126,20 +114,17 @@ def main():
     initial_map.save(initial_map_path)
     print(f"Initial solution map saved to {initial_map_path}")
     
-    # Step 3: Run genetic algorithm
     print("\n---------------------------------------")
     print("Starting genetic algorithm evolution...")
     ga = Genetic(
         population=population,
         max_generations=MAX_GENERATIONS,
-        selection_rate=SELECTION_RATE,
         mutation_rate=MUTATION_RATE,
         elitism_size=ELITISM_SIZE
     )
     
     final_solution = ga.run(verbose=True)
     
-    # Step 4: Visualize final solution
     print("\n---------------------------------------")
     print("Final Solution:")
     print(f"Fitness (Total Distance): {final_solution.fitness:.2f} km")
@@ -152,9 +137,8 @@ def main():
     final_map.save(final_map_path)
     print(f"Final solution map saved to {final_map_path}")
     
-    # Step 5: Plot fitness evolution
+
     print("\n---------------------------------------")
-    print("Plotting fitness evolution...")
     progress = ga.get_progress()
     plt = plot_evolution_progress(
         progress["best_fitness_history"], 
@@ -162,12 +146,6 @@ def main():
     )
     plot_path = os.path.join(static_dir, "fitness_evolution.png")
     plt.savefig(plot_path)
-    print(f"Fitness evolution plot saved to {plot_path}")
-    
-    # Calculate improvement
-    improvement = 1 - (final_solution.fitness / initial_best.fitness)
-    print(f"\nImprovement: {improvement:.2%}")
-    print("VRP solution completed successfully!")
 
 if __name__ == "__main__":
     main()

@@ -31,25 +31,17 @@ class Population:
         """Create initial random population of chromosomes."""
         self.chromosomes = []
         for _ in range(self.pop_size):
-            # Create a new chromosome
             chromosome = Chromosome(self.num_locations, self.num_vehicles)
-            # Calculate its fitness
             chromosome.calculate_fitness(self.distance_matrix)
-            # Add to population
             self.chromosomes.append(chromosome)
             
     def find_best_chromosome(self):
         """
         Find the chromosome with the best fitness (lowest distance).
-        
-        Returns:
-            Chromosome: The best chromosome in the population
+
         """
         if not self.chromosomes:
             return None
-            
-        # Sort chromosomes by fitness (ascending order since we're minimizing)
-        # and return the best (first) one
         sorted_chromosomes = sorted(self.chromosomes, key=lambda x: x.fitness)
         best_chromosome = sorted_chromosomes[0]
         
